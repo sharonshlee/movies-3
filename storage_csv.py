@@ -3,7 +3,7 @@ StorageCsv class reading and writing to a CSV file.
 """
 import csv
 from istorage import IStorage
-from utils import colors
+from utils import colors, check_file_path
 
 
 class StorageCsv(IStorage):
@@ -21,6 +21,8 @@ class StorageCsv(IStorage):
         Reading from a CSV file.
         :return: file content (str)
         """
+        check_file_path(self._file_path, '.csv')
+
         with open(self._file_path, 'r', encoding='utf8') as file:
             return file.read()
 
@@ -29,6 +31,8 @@ class StorageCsv(IStorage):
         Append a movie to movies CSV file.
         :param args: Any
         """
+        check_file_path(self._file_path, '.csv')
+
         with open(self._file_path, 'a', encoding='utf8') as file:
             data = ''
             for i, arg in enumerate(args):
@@ -44,6 +48,8 @@ class StorageCsv(IStorage):
         Reading lines in a csv file
         :return: lines (list)
         """
+        check_file_path(self._file_path, '.csv')
+
         lines = []
         with open(self._file_path, 'r', encoding='utf8') as file:
             reader = csv.reader(file)
@@ -56,33 +62,32 @@ class StorageCsv(IStorage):
         Writing all content to a csv file
         :param lines: list
         """
+        check_file_path(self._file_path, '.csv')
+
         with open(self._file_path, 'w', newline='', encoding='utf8') as file:
             writer = csv.writer(file)
             writer.writerows(lines)
 
-    def list_movies(self) -> dict | None:
+    def list_movies(self) -> dict:
         """
         Returns a dictionary of dictionaries that
         contains the movies information in the database.
         The function loads the information from the CSV
         file and returns the data.
-        :return: movies (dict | None)
+        :return: movies (dict)
         """
-        try:
-            csv_contents = self._read_lines()
-            movies = {}
-            for content in csv_contents[1:]:
-                movies[content[0]] = {'rating': float(content[1]),
-                                      'year': int(content[2]),
-                                      'notes': content[3],
-                                      'poster': content[4],
-                                      'website': content[5],
-                                      'country': ",".join(content[6:len(content)])
-                                      }
-            return movies
-        except FileNotFoundError as err:
-            print('File not found error:', str(err))
-        return None
+        # try:
+        csv_contents = self._read_lines()
+        movies = {}
+        for content in csv_contents[1:]:
+            movies[content[0]] = {'rating': float(content[1]),
+                                  'year': int(content[2]),
+                                  'notes': content[3],
+                                  'poster': content[4],
+                                  'website': content[5],
+                                  'country': ",".join(content[6:len(content)])
+                                  }
+        return movies
 
     def add_movie(self,
                   title: str,
@@ -90,7 +95,7 @@ class StorageCsv(IStorage):
                   year: int,
                   poster: str,
                   website: str,
-                  country: str) -> str | None:
+                  country: str) -> str:
         """
         Adds a movie to the movies database.
         Loads the information from file, add the movie,
@@ -102,45 +107,44 @@ class StorageCsv(IStorage):
         :param poster: str
         :param website: str
         :param country: str
-        :returns: add message (str | None)
+        :returns: add message (str)
         """
-        try:
-            if not isinstance(title, str):
-                raise TypeError('Title must be string.')
-            if not isinstance(rating, float):
-                raise TypeError('Rating must be float.')
-            if not isinstance(year, int):
-                raise TypeError('Year must be int.')
-            if not isinstance(poster, str):
-                raise TypeError('Poster must be string.')
-            if not isinstance(website, str):
-                raise TypeError('Website must be string.')
-            if not isinstance(country, str):
-                raise TypeError('Country must be string.')
+        if not isinstance(title, str):
+            raise TypeError('Title must be string.')
+        if not isinstance(rating, float):
+            raise TypeError('Rating must be float.')
+        if not isinstance(year, int):
+            raise TypeError('Year must be int.')
+        if not isinstance(poster, str):
+            raise TypeError('Poster must be string.')
+        if not isinstance(website, str):
+            raise TypeError('Website must be string.')
+        if not isinstance(country, str):
+            raise TypeError('Country must be string.')
 
-            movies = self._read_file()
+        if not title:
+            raise ValueError('Title must not be empty.')
+        if not rating:
+            raise ValueError('Rating must not be empty.')
 
-            if title in movies:
-                return colors.get('red') + \
-                    f"Movie '{title}' won't be added as it is already exist." + \
-                    colors.get('default')
+        movies = self._read_file()
 
-            self._write_line(title,
-                             str(rating),
-                             str(year),
-                             '',  # notes
-                             poster,
-                             website,
-                             country)
-
+        if title in movies:
             return colors.get('red') + \
-                f"Movie '{title}' was successfully added." + \
+                f"Movie '{title}' won't be added as it is already exist." + \
                 colors.get('default')
-        except FileNotFoundError as err:
-            print('File not found error:', str(err))
-        except TypeError as err:
-            print(err)
-        return None
+
+        self._write_line(title,
+                         str(rating),
+                         str(year),
+                         '',  # notes
+                         poster,
+                         website,
+                         country)
+
+        return colors.get('red') + \
+            f"Movie '{title}' was successfully added." + \
+            colors.get('default')
 
     def delete_movie(self, title: str) -> str:
         """
@@ -151,30 +155,27 @@ class StorageCsv(IStorage):
         :param title: str
         :return: delete message (str)
         """
-        try:
-            if not isinstance(title, str):
-                raise TypeError('Title must be string.')
+        if not isinstance(title, str):
+            raise TypeError('Title must be string.')
 
-            movies = self._read_file()
+        if not title:
+            raise ValueError('Title must not be empty.')
 
-            if title in movies:
-                lines = self._read_lines()
+        movies = self._read_file()
 
-                for i, line in enumerate(lines):
-                    if title == line[0]:
-                        # delete a line of content
-                        lines.pop(i)
+        if title in movies:
+            lines = self._read_lines()
 
-                self._write_all_content(lines)
+            for i, line in enumerate(lines):
+                if title == line[0]:
+                    # delete a line of content
+                    lines.pop(i)
 
-                return f"{colors.get('red')}" \
-                       f"Movie '{title}' successfully deleted." \
-                       f"{colors.get('default')}"
+            self._write_all_content(lines)
 
-        except FileNotFoundError as err:
-            print('File not found error:', str(err))
-        except TypeError as err:
-            print(err)
+            return f"{colors.get('red')}" \
+                   f"Movie '{title}' successfully deleted." \
+                   f"{colors.get('default')}"
 
         return f"{colors.get('red')}" \
                f"Movie '{title}' not found." \
@@ -190,34 +191,31 @@ class StorageCsv(IStorage):
         :param notes: str
         :return: update message (str)
         """
-        try:
-            if not isinstance(title, str):
-                raise TypeError('Title must be string.')
+        if not isinstance(title, str):
+            raise TypeError('Title must be string.')
+        if not isinstance(notes, str):
+            raise TypeError('Notes must be string.')
 
-            if not isinstance(notes, str):
-                raise TypeError('Notes must be string.')
+        if not title:
+            raise ValueError('Title must not be empty.')
 
-            movies = self._read_file()
+        movies = self._read_file()
 
-            if title in movies:
-                lines = self._read_lines()
+        if title in movies:
+            lines = self._read_lines()
 
-                for line in lines[1:]:
-                    if title == line[0]:
-                        print(title, line[0])
-                        # update a line of content
-                        line[3] = notes
+            for line in lines[1:]:
+                if title == line[0]:
+                    print(title, line[0])
+                    # update a line of content
+                    line[3] = notes
 
-                self._write_all_content(lines)
+            self._write_all_content(lines)
 
-                return f"{colors.get('red')}" \
-                       f"Movie '{title}' successfully updated." \
-                       f"{colors.get('default')}"
+            return f"{colors.get('red')}" \
+                   f"Movie '{title}' successfully updated." \
+                   f"{colors.get('default')}"
 
-        except FileNotFoundError as err:
-            print('File not found error:', str(err))
-        except TypeError as err:
-            print(err)
         return f"{colors.get('red')}" \
                f"Movie '{title}' not found." \
                f"{colors.get('default')}"

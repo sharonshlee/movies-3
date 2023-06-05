@@ -16,13 +16,13 @@ class IStorage(ABC):
     """
 
     @abstractmethod
-    def list_movies(self) -> dict | None:
+    def list_movies(self) -> dict:
         """
         Returns a dictionary of dictionaries that
         contains the movies information in the database.
         The function loads the information from a
         file and returns the data.
-        :return: movies (dict | None)
+        :return: movies (dict)
         """
 
     @abstractmethod

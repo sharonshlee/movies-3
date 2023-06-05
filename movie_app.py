@@ -3,6 +3,8 @@ MovieApp class
 to display menu, user input and
 movies functions calling.
 """
+import json
+
 import requests
 
 from utils \
@@ -36,20 +38,37 @@ class MovieApp:
         List all the movies with total count, names and ratings.
         :return: movies info (str)
         """
-        movies = self._storage.list_movies()
-        if not movies:
-            return f"{colors.get('red')}" \
-                   f"There are no movies in the file." \
-                   f"{colors.get('default')}"
-        print(
-            f"\n{colors.get('green')}There are {colors.get('red')}"
-            f"{len(movies)}{colors.get('green')} "
-            f"movies in the database.{colors.get('default')}\n")
-        return "\n".join(
-            [f"{colors.get('purple')}{name}, "
-             f"{colors.get('yellow')}{info.get('rating')}"
-             f"{colors.get('default')}"
-             for name, info in movies.items()])
+        try:
+            movies = self._storage.list_movies()
+            if not movies:
+                return f"{colors.get('red')}" \
+                       f"There are no movies in the file." \
+                       f"{colors.get('default')}"
+            print(
+                f"\n{colors.get('green')}There are {colors.get('red')}"
+                f"{len(movies)}{colors.get('green')} "
+                f"movies in the database.{colors.get('default')}\n")
+            return "\n".join(
+                [f"{colors.get('purple')}{name}, "
+                 f"{colors.get('yellow')}{info.get('rating')}"
+                 f"{colors.get('default')}"
+                 for name, info in movies.items()])
+        except ValueError as err:
+            return str(err)
+        except FileNotFoundError as err:
+            return str(err)
+
+    def _fetch_movie_api_response(self, title: str) -> json:
+        """
+        Fetch api response movie info
+        given movie title
+        :param title: str
+        :return: movie info (json)
+        """
+        response = requests.get(f'{MovieApp._BASE_URL_KEY}&t={title}', timeout=5)
+        response.raise_for_status()  # check if there was an error with the request
+
+        return response.json()
 
     def _command_add_movie(self) -> str:
         """
@@ -63,24 +82,21 @@ class MovieApp:
             title = input('Enter a movie title: ')
 
         try:
-            response = requests.get(f'{MovieApp._BASE_URL_KEY}&t={title}', timeout=5)
-            response.raise_for_status()  # check if there was an error with the request
-            response = response.json()
+            response = self._fetch_movie_api_response(title)
 
-            title = response.get('Title', '')
-            year = int(response.get('Year', 0))
-            rating = float(response.get('imdbRating', 0))
-            poster = response.get('Poster', '')
-            website = MovieApp._IMDB_BASE_URL + response.get('imdbID', '')
-            country = response.get('Country', '')
+            return self._storage.add_movie(response.get('Title', ''),
+                                           float(response.get('imdbRating', 0)),
+                                           int(response.get('Year', 0)),
+                                           response.get('Poster', ''),
+                                           MovieApp._IMDB_BASE_URL + response.get('imdbID', ''),
+                                           response.get('Country', ''))
 
-            return self._storage.add_movie(title,
-                                           rating,
-                                           year,
-                                           poster,
-                                           website,
-                                           country)
-
+        except TypeError as err:
+            return str(err)
+        except ValueError as err:
+            return str(err)
+        except FileNotFoundError as err:
+            return str(err)
         except (requests.exceptions.Timeout,
                 requests.exceptions.HTTPError,
                 requests.exceptions.ConnectionError,
@@ -103,7 +119,14 @@ class MovieApp:
         while not notes:
             notes = input('Enter a movie notes: ')
 
-        return self._storage.update_movie(title, notes)
+        try:
+            return self._storage.update_movie(title, notes)
+        except TypeError as err:
+            return str(err)
+        except ValueError as err:
+            return str(err)
+        except FileNotFoundError as err:
+            return str(err)
 
     def _command_delete_movie(self) -> str:
         """
@@ -113,7 +136,14 @@ class MovieApp:
         title = input('Enter a movie title: ')
         while not title:
             title = input('Enter a movie title: ')
-        return self._storage.delete_movie(title)
+        try:
+            return self._storage.delete_movie(title)
+        except TypeError as err:
+            return str(err)
+        except ValueError as err:
+            return str(err)
+        except FileNotFoundError as err:
+            return str(err)
 
     def _command_movie_stats(self) -> str:
         """

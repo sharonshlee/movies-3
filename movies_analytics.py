@@ -59,31 +59,25 @@ class MovieAnalytics:
         # Sort the list in ascending order.
         return get_median(ratings)
 
-    def fuzzy_search(self) -> str:
+    def _get_search_scores(self, movie_name):
         """
-        Search all the movies by part of the movie name,
-        incorrect spelling, case-insensitive.
-        :return: search message (str)
+        Dictionary to store similarity scores for each movie name
+        :param name: str
+        :return: scores (dict)
         """
-        name = input('Enter a movie title: ')
-        # Dictionary to store similarity scores for each movie name
         scores = {}
         for key in list(self._movies.keys()):
-            ratio = fuzz.ratio(name.lower(), key.lower())
+            ratio = fuzz.ratio(movie_name.lower(), key.lower())
             scores[key] = ratio
+        return scores
 
-        # if score is 100 means movie name entered has the exact match in the movies dict.
-        if 100 in scores.values():
-            return [f"\nSearch result for {colors.get('red')}'{name}'"
-                    f"{colors.get('default')}:\n"
-                    f"{colors.get('purple')}{title}, "
-                    f"{colors.get('yellow')}{info.get('rating')} - "
-                    f"{info.get('year')}{colors.get('default')}"
-                    for title, info in self._movies.items()
-                    if title.lower() == name.lower()][0]
-
-        # no exact match, need recommendations
-
+    def _get_top_search_scores(self, scores: dict) -> list[tuple]:
+        """
+        Get the scores that is above the median score,
+        return top half of the results.
+        :return:
+        :rtype:
+        """
         # find the median score
         median_score = get_median_scores(scores)
 
@@ -94,22 +88,66 @@ class MovieAnalytics:
                 recommended_names[title] = score
 
         # sort descending to get the top score
-        recommended_names_desc_tuple = sorted(recommended_names.items(),
-                                              key=lambda x: x[1], reverse=True)
+        return sorted(recommended_names.items(),
+                      key=lambda x: x[1], reverse=True)
 
-        not_found_message = f"{colors.get('red')}" \
-                            f"Movie '{name}' does not exist." \
-                            f"{colors.get('default')}"
+    def _get_matches_result(self, top_search_result: list[tuple]) -> str:
+        """
+        Format match result
+        :return: formatted matched result (str)
+        """
+        return "\n".join(f"{colors.get('purple')}{name[0]}, "
+                         f"{colors.get('yellow')}"
+                         f"{self._movies.get(name[0])['rating']} - "
+                         f"{self._movies.get(name[0])['year']}"
+                         f"{colors.get('default')}"
+                         for name in top_search_result)
 
-        if median_score == 0:
+    def _get_exact_matched_result(self, name: str) -> str:
+        """
+        Return formatted exact matched search result
+        :param name: str
+        :return: formatted matched result (str)
+        """
+        return [f"\nSearch result for {colors.get('red')}'{name}'"
+                f"{colors.get('default')}:\n"
+                f"{colors.get('purple')}{title}, "
+                f"{colors.get('yellow')}{info.get('rating')} - "
+                f"{info.get('year')}{colors.get('default')}"
+                for title, info in self._movies.items()
+                if title.lower() == name.lower()][0]
+
+    def _not_found_message(self, name: str) -> str:
+        """
+        Return movie not exist message
+        :param name: str
+        :return: movie not exist message (str)
+        """
+        return f"{colors.get('red')}" \
+               f"Movie '{name}' does not exist." \
+               f"{colors.get('default')}"
+
+    def fuzzy_search(self) -> str:
+        """
+        Search all the movies by part of the movie name,
+        incorrect spelling, case-insensitive.
+        :return: search message (str)
+        """
+        name = input('Enter a movie title: ')
+        # Dictionary to store similarity scores for each movie name
+        scores = self._get_search_scores(name)
+
+        # if score is 100 means movie name entered has the exact match in the movies dict.
+        if 100 in scores.values():
+            return self._get_exact_matched_result(name)
+
+        # no exact match, need recommendations
+        not_found_message = self._not_found_message(name)
+
+        if get_median_scores(scores) == 0:
             return f"\n{not_found_message}"
 
-        matches_result = "\n".join(f"{colors.get('purple')}{name[0]}, "
-                                   f"{colors.get('yellow')}"
-                                   f"{self._movies.get(name[0])['rating']} - "
-                                   f"{self._movies.get(name[0])['year']}"
-                                   f"{colors.get('default')}"
-                                   for name in recommended_names_desc_tuple)
+        matches_result = self._get_matches_result(self._get_top_search_scores(scores))
 
         return f"\n{not_found_message}\n" \
                f"{colors.get('red')}Did you mean:" \

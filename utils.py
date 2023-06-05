@@ -1,6 +1,8 @@
 """
 A utility file for global access constants.
 """
+import os
+
 colors = {'default': '\033[0m',
           'red': '\033[31m',
           'green': '\033[32m',
@@ -58,3 +60,18 @@ def exit_app() -> str:
     Exit app statement.
     """
     return "Bye!"
+
+
+def check_file_path(file_path: str, file_extension: str):
+    """
+    Check if the file format is correct.
+    Check if the file exists.
+    :param file_path: str
+    :param file_extension: str
+    """
+    if not file_path.endswith(file_extension):
+        raise ValueError(f'Invalid file format. '
+                         f'File must be in {file_extension} format.')
+
+    if not os.path.isfile(file_path):
+        raise FileNotFoundError(f'The {file_path} file does not exist.')

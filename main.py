@@ -1,5 +1,10 @@
 """
 Main class to run movie app from a IStorage object.
+
+Run this file using terminal:
+python3 main.py movies.json
+or
+python3 main.py movies.csv
 """
 import argparse
 from movie_app import MovieApp
@@ -10,7 +15,7 @@ from storage_json import StorageJson
 def main():
     """
     Creating and running a movie app
-    from a StorageJson object.
+    from a IStorage object.
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('file_path', help='Movie file path')
